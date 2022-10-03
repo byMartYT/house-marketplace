@@ -76,13 +76,13 @@ button {
   cursor: pointer;
   position: absolute;
   top: -3%;
-  right: -2%;
+  right: 0%;
 }
 .editIcon {
   cursor: pointer;
   position: absolute;
   top: -3.4%;
-  right: 20px;
+  right: 4%;
 }
 
 .pageContainer,

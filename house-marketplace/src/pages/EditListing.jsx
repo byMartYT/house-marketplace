@@ -1,7 +1,6 @@
-import React from 'react';
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
-import { useNavigate } from 'react-router-dom';
 import Spinner from '../components/Spinner';
 import { toast } from 'react-toastify';
 import {
@@ -11,14 +10,15 @@ import {
   getDownloadURL,
 } from 'firebase/storage';
 import { db } from '../firebase.config';
+import { doc, updateDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { v4 as uuidv4 } from 'uuid';
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 
-function CreateListing() {
+function EditListing() {
   // eslint-disable-next-line
   const [geolocationEnabled, setGeoLocationEnabled] = useState(true);
 
   const [loading, setLoading] = useState(false);
+  const [listing, setListing] = useState(null);
 
   const [formData, setFormData] = useState({
     type: 'rent',
@@ -54,7 +54,35 @@ function CreateListing() {
 
   const auth = getAuth();
   const navigate = useNavigate();
+  const params = useParams();
   const isMounted = useRef(true);
+
+  //Redirect if listing is not users
+  useEffect(() => {
+    if (listing && listing.userRef !== auth.currentUser.uid) {
+      toast.error('You cannot edit that listing');
+      navigate('/');
+    }
+  });
+
+  useEffect(() => {
+    const fetchListing = async () => {
+      setLoading(true);
+      const docRef = doc(db, 'listings', params.listingId);
+
+      const docSnap = await getDoc(docRef);
+
+      if (docSnap.exists()) {
+        setListing(docSnap.data());
+        setLoading(false);
+        setFormData({ ...docSnap.data(), address: docSnap.data().location });
+      } else {
+        navigate('/');
+        toast.error('Listing does not exist!');
+      }
+    };
+    fetchListing();
+  }, [navigate, params.listingId]);
 
   useEffect(() => {
     if (isMounted) {
@@ -179,7 +207,8 @@ function CreateListing() {
     formDataCopy.location = address;
     !formDataCopy.isOffer && delete formDataCopy.discountedPrice;
 
-    const docRef = await addDoc(collection(db, 'listings'), formDataCopy);
+    const docRef = doc(db, 'listings', params.listingId);
+    await updateDoc(docRef, formDataCopy);
 
     setLoading(false);
 
@@ -218,7 +247,7 @@ function CreateListing() {
   return (
     <div className='profile'>
       <header>
-        <p className='pageHeader'>Create a Listing</p>
+        <p className='pageHeader'>Edit Listing</p>
       </header>
 
       <main>
@@ -445,7 +474,7 @@ function CreateListing() {
             required
           />
           <button type='submit' className='primaryButton createListingButton'>
-            Create Listing
+            Edit Listing
           </button>
         </form>
       </main>
@@ -453,4 +482,4 @@ function CreateListing() {
   );
 }
 
-export default CreateListing;
+export default EditListing;
